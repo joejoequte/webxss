@@ -39,4 +39,4 @@ jobs:
     - name: 运行 Dalfox 扫描
       run: |
         # 使用用户输入的 URL 进行扫描
-        dalfox url ${{ github.event.inputs.target_url }} --report --remote-payloads --grep
+        dalfox url ${{ github.event.inputs.target_url }} --report --remote-payloads --grep --follow-redirects --waf-evasion
