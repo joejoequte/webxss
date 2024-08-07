@@ -1,31 +1,42 @@
-name: Dalfox Scan
+name: Dalfox 扫描(单网页版)
 
+# 工作流触发条件，当手动触发工作流时，用户需要输入目标URL
 on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: 'URL to scan with Dalfox'
+        description: '要扫描的URL'
         required: true
         default: 'https://example.com'
 
 jobs:
   scan:
+    # 在最新的 Ubuntu 环境下运行
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+    # 步骤1：检出仓库代码
+    - name: 检出仓库代码
+      # 使用 actions/checkout@v3 版本
+      uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
+    # 步骤2：设置 Go 环境
+    - name: 设置 Go 环境
+      # 使用 actions/setup-go@v4 版本
+      uses: actions/setup-go@v4
       with:
         go-version: '1.17'
     
-    - name: Install Dalfox
+    # 步骤3：安装 Dalfox
+    - name: 安装 Dalfox
       run: |
+        # 安装 Dalfox 工具
         go install github.com/hahwul/dalfox/v2@latest
+        # 将安装路径添加到系统路径中
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
-    - name: Run Dalfox scan
+    # 步骤4：运行 Dalfox 扫描
+    - name: 运行 Dalfox 扫描
       run: |
+        # 使用用户输入的 URL 进行扫描
         dalfox url ${{ github.event.inputs.target_url }}
