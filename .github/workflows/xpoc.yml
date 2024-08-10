@@ -44,25 +44,22 @@ jobs:
     - name: 缓存 Xpoc 二进制文件
       uses: actions/cache@v3
       with:
-        path: xpoc_workspace/xpoc.zip
-        key: ${{ runner.os }}-xpoc-${{ hashFiles('xpoc_workspace/xpoc.zip') }}
+        path: xpoc_workspace/xpoc
+        key: ${{ runner.os }}-xpoc-${{ hashFiles('xpoc_workspace/xpoc') }}
         restore-keys: |
           ${{ runner.os }}-xpoc-
 
     # 步骤5：下载并解压 Xpoc 二进制文件（如果缓存未命中）
-    - name: 下载并解压 Xpoc
+    - name: 下载 Xpoc
       run: |
         mkdir -p xpoc_workspace
         cd xpoc_workspace
-        if [ ! -f xpoc.zip ]; then
-          curl -L -o xpoc.zip https://github.com/chaitin/xpoc/releases/download/v1.0/xpoc_linux_amd64.zip  # 请根据实际情况选择最新版本和系统架构
+        if [ ! -f xpoc ]; then
+          curl -L -o xpoc https://github.com/chaitin/xray/releases/download/xpoc-0.1.0/xpoc_linux_amd64
         fi
-        # 解压 xpoc 文件
-        unzip -o xpoc.zip
-        mv xpoc_linux_amd64 xpoc  # 将解压后的文件重命名为 xpoc
         chmod +x xpoc  # 确保 xpoc 可执行
         ls -l  # 列出文件，确保 xpoc 文件存在并可执行
-        ./xpoc version  # 查看 xpoc 版本号
+        ./xpoc --version  # 查看 xpoc 版本号
 
     # 步骤6：创建输出目录并运行 Rad 扫描
     - name: 运行 Rad 扫描
