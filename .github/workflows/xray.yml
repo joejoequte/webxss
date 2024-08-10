@@ -13,11 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 步骤1：检出仓库代码
     - name: 检出仓库代码
       uses: actions/checkout@v3
 
-    # 步骤2：缓存 Rad 二进制文件
     - name: 缓存 Rad 二进制文件
       uses: actions/cache@v3
       with:
@@ -26,7 +24,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-rad-
 
-    # 步骤3：下载并解压 Rad 二进制文件（如果缓存未命中）
     - name: 下载并解压 Rad
       run: |
         mkdir -p rad_workspace
@@ -37,9 +34,8 @@ jobs:
           mv rad_linux_amd64 rad
           chmod +x rad
         fi
-        ls -l rad  # 确保 rad 文件存在并可执行
+        ls -l rad
 
-    # 步骤4：缓存 Xray 二进制文件
     - name: 缓存 Xray 二进制文件
       uses: actions/cache@v3
       with:
@@ -48,7 +44,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-xray-
 
-    # 步骤5：下载并解压 Xray 二进制文件（如果缓存未命中）
     - name: 下载并解压 Xray
       run: |
         mkdir -p xray_workspace
@@ -59,15 +54,18 @@ jobs:
           mv xray_linux_amd64 xray
           chmod +x xray
         fi
-        ls -l xray  # 确保 xray 文件存在并可执行
+        ls -l xray
 
-    # 步骤6：创建输出目录并运行 Rad 扫描
+    - name: 复制配置文件到 Xray 工作目录
+      run: |
+        cp -r 123/* xray_workspace/
+        ls -l xray_workspace  # 检查配置文件是否已复制
+
     - name: 运行 Rad 扫描
       run: |
         mkdir -p output
         ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} --text-output ./output/rad_output.txt
 
-    # 步骤7：验证 Rad 的输出
     - name: 验证 Rad 输出
       run: |
         if [ -s output/rad_output.txt ]; then
@@ -77,7 +75,6 @@ jobs:
           exit 1
         fi
 
-    # 步骤8：提取扫描到的网址并使用 Xray 扫描
     - name: 提取网址并运行 Xray 扫描
       id: xray_scan
       run: |
@@ -97,7 +94,6 @@ jobs:
           exit 1
         fi
 
-    # 步骤9：将扫描结果作为输出工件（Artifacts）导出
     - name: 导出扫描结果
       uses: actions/upload-artifact@v3
       with:
