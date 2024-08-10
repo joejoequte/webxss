@@ -1,42 +1,74 @@
-name: Dalfox 扫描(单网页版)
+name: Rad & Dalfox 扫描
 
-# 工作流触发条件，当手动触发工作流时，用户需要输入目标URL
+# 手动触发工作流，用户需要输入目标域名
 on:
   workflow_dispatch:
     inputs:
-      target_url:
-        description: '要扫描的URL'
+      target_domain:
+        description: '要扫描的域名'
         required: true
-        default: 'https://example.com'
+        default: 'example.com'
 
 jobs:
   scan:
-    # 在最新的 Ubuntu 环境下运行
     runs-on: ubuntu-latest
 
     steps:
-    # 步骤1：检出仓库代码
+    # 步骤1：设置缓存以提高工作流效率
+    - name: 设置缓存以提高工作流效率
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/go/bin
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    # 步骤2：检出仓库代码
     - name: 检出仓库代码
-      # 使用 actions/checkout@v3 版本
       uses: actions/checkout@v3
 
-    # 步骤2：设置 Go 环境
+    # 步骤3：安装最新的 Go 环境
     - name: 设置 Go 环境
-      # 使用 actions/setup-go@v4 版本
       uses: actions/setup-go@v4
       with:
-        go-version: '1.17'
+        go-version: '1.22'  # 最新版本的 Go
+
+    # 步骤4：安装 Rad 工具
+    - name: 安装 Rad
+      run: |
+        # 克隆 Rad 仓库并编译
+        git clone https://github.com/chaitin/rad.git
+        cd rad
+        go build
+
+    # 步骤5：运行 Rad 扫描并将结果保存为文件
+    - name: 运行 Rad 扫描
+      run: |
+        cd rad
+        # 扫描目标域名并将发现的URL输出到文件 rad_output.txt
+        ./rad -t ${{ github.event.inputs.target_domain }} -o rad_output.txt
     
-    # 步骤3：安装 Dalfox
+    # 步骤6：安装 Dalfox 工具
     - name: 安装 Dalfox
       run: |
-        # 安装 Dalfox 工具
+        # 安装 Dalfox 并添加到系统路径
         go install github.com/hahwul/dalfox/v2@latest
-        # 将安装路径添加到系统路径中
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
-    # 步骤4：运行 Dalfox 扫描
-    - name: 运行 Dalfox 扫描
+    # 步骤7：使用 Dalfox 扫描 Rad 的输出结果，并将结果保存到文件
+    - name: 使用 Dalfox 扫描
       run: |
-        # 使用用户输入的 URL 进行扫描
-        dalfox url ${{ github.event.inputs.target_url }} 
+        mkdir -p dalfox_results
+        # 逐行读取 rad_output.txt 中的 URL，并使用 Dalfox 进行扫描，结果保存到 dalfox_results 文件夹中
+        while IFS= read -r url; do
+          dalfox url "$url" --output dalfox_results/$(echo "$url" | sed 's/[:\/]/_/g').txt
+        done < rad/rad_output.txt
+
+    # 步骤8：将扫描结果作为输出工件（Artifacts）导出
+    - name: 导出扫描结果
+      uses: actions/upload-artifact@v3
+      with:
+        name: dalfox-scan-results
+        path: dalfox_results/
