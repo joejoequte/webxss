@@ -42,6 +42,8 @@ jobs:
         cd rad_workspace
         git clone https://github.com/chaitin/rad.git
         cd rad
+        go mod init rad  # 初始化 Go 模块
+        go mod tidy  # 整理依赖
         go build -o rad  # 构建 Rad 项目，生成可执行文件
 
     # 步骤5：创建输出目录并运行 Rad 扫描
