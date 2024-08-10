@@ -1,4 +1,4 @@
-name: Rad & Xpoc 扫描
+name: Xpoc 扫描
 
 # 手动触发工作流，用户需要输入目标域名
 on:
