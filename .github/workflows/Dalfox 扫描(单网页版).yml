@@ -29,27 +29,25 @@ jobs:
     - name: 检出仓库代码
       uses: actions/checkout@v3
 
-    # 步骤3：安装最新的 Go 环境
-    - name: 设置 Go 环境
-      uses: actions/setup-go@v4
+    # 步骤3：安装 Rust 环境
+    - name: 安装 Rust 环境
+      uses: actions-rs/toolchain@v1
       with:
-        go-version: '1.22'  # 使用最新版本的 Go
+        toolchain: stable
+        target: x86_64-unknown-linux-gnu
 
-    # 步骤4：克隆 Rad 仓库，编译可执行文件，并初始化 Go 模块
-    - name: 克隆 Rad 仓库并初始化 Go 模块
+    # 步骤4：克隆 Rad 仓库并构建
+    - name: 克隆 Rad 仓库并构建
       run: |
         git clone https://github.com/chaitin/rad.git
         cd rad
-        go mod init rad  # 初始化 Go 模块
-        go mod tidy      # 整理模块依赖
-        go build -o rad  # 编译 rad 可执行文件
+        cargo build --release  # 构建 Rad 项目，生成可执行文件
 
     # 步骤5：创建输出目录并运行 Rad 扫描
     - name: 运行 Rad 扫描
       run: |
         mkdir -p output
-        cd rad
-        ./rad -t ${{ github.event.inputs.target_domain }} -o ../output/rad_output.txt  # 将输出结果保存到 output 目录中的 rad_output.txt 文件中
+        ./rad/target/release/rad -t ${{ github.event.inputs.target_domain }} -o ./output/rad_output.txt  # 将输出结果保存到 output 目录中的 rad_output.txt 文件中
     
     # 步骤6：安装 Dalfox 工具
     - name: 安装 Dalfox
