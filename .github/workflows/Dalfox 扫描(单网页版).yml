@@ -18,34 +18,36 @@ jobs:
     - name: 检出仓库代码
       uses: actions/checkout@v3
 
-    # 步骤3：下载并解压 Rad 二进制文件
+    # 步骤2：下载并解压 Rad 二进制文件
     - name: 下载并解压 Rad
       run: |
         mkdir -p rad_workspace
         cd rad_workspace
         curl -L -o rad.zip https://github.com/chaitin/rad/releases/download/1.0/rad_linux_amd64.zip
         unzip rad.zip
+        mv rad_linux_amd64 rad  # 将解压后的文件重命名为 rad
         chmod +x rad  # 确保 rad 可执行
+        ls -l  # 列出文件，确保 rad 文件存在并可执行
 
-    # 步骤4：创建输出目录并运行 Rad 扫描
+    # 步骤3：创建输出目录并运行 Rad 扫描
     - name: 运行 Rad 扫描
       run: |
         mkdir -p output
         ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} -o ./output/rad_output.txt  # 将输出结果保存到 output 目录中的 rad_output.txt 文件中
     
-    # 步骤5：安装 Dalfox 工具
+    # 步骤4：安装 Dalfox 工具
     - name: 安装 Dalfox
       run: |
         go install github.com/hahwul/dalfox/v2@latest
         echo "$HOME/go/bin" >> $GITHUB_PATH
 
-    # 步骤6：使用 Dalfox 扫描 Rad 的输出结果，并生成报告
+    # 步骤5：使用 Dalfox 扫描 Rad 的输出结果，并生成报告
     - name: 使用 Dalfox 扫描
       run: |
         mkdir -p dalfox_results
         dalfox file output/rad_output.txt --output dalfox_results/dalfox_results.json --format json --report --report-format=json --silence
 
-    # 步骤7：将扫描结果作为输出工件（Artifacts）导出
+    # 步骤6：将扫描结果作为输出工件（Artifacts）导出
     - name: 导出扫描结果
       uses: actions/upload-artifact@v3
       with:
