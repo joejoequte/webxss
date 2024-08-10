@@ -58,8 +58,21 @@ jobs:
 
     - name: 复制配置文件到 Xray 工作目录
       run: |
-        cp -r 123/* xray_workspace/
-        ls -l xray_workspace  # 检查配置文件是否已复制
+        cp -r ./123/* ./xray_workspace/
+        ls -l ./xray_workspace/  # 列出 xray_workspace 目录下的文件以确认复制成功
+        # 检查关键配置文件是否存在
+        if [ ! -f ./xray_workspace/xray.yaml ]; then
+          echo "xray.yaml 文件未找到"
+          exit 1
+        fi
+        if [ ! -f ./xray_workspace/module.xray.yaml ]; then
+          echo "module.xray.yaml 文件未找到"
+          exit 1
+        fi
+        if [ ! -f ./xray_workspace/plugin.xray.yaml ]; then
+          echo "plugin.xray.yaml 文件未找到"
+          exit 1
+        fi
 
     - name: 运行 Rad 扫描
       run: |
