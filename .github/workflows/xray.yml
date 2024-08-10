@@ -1,0 +1,107 @@
+name: Rad & Xray 扫描
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_domain:
+        description: '要扫描的域名'
+        required: true
+        default: 'example.com'
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 步骤1：检出仓库代码
+    - name: 检出仓库代码
+      uses: actions/checkout@v3
+
+    # 步骤2：缓存 Rad 二进制文件
+    - name: 缓存 Rad 二进制文件
+      uses: actions/cache@v3
+      with:
+        path: rad_workspace/rad
+        key: ${{ runner.os }}-rad-${{ hashFiles('rad_workspace/rad.zip') }}
+        restore-keys: |
+          ${{ runner.os }}-rad-
+
+    # 步骤3：下载并解压 Rad 二进制文件（如果缓存未命中）
+    - name: 下载并解压 Rad
+      run: |
+        mkdir -p rad_workspace
+        cd rad_workspace
+        if [ ! -f rad ]; then
+          curl -L -o rad.zip https://github.com/chaitin/rad/releases/download/1.0/rad_linux_amd64.zip
+          unzip -o rad.zip
+          mv rad_linux_amd64 rad
+          chmod +x rad
+        fi
+        ls -l rad  # 确保 rad 文件存在并可执行
+
+    # 步骤4：缓存 Xray 二进制文件
+    - name: 缓存 Xray 二进制文件
+      uses: actions/cache@v3
+      with:
+        path: xray_workspace/xray
+        key: ${{ runner.os }}-xray-${{ hashFiles('xray_workspace/xray.zip') }}
+        restore-keys: |
+          ${{ runner.os }}-xray-
+
+    # 步骤5：下载并解压 Xray 二进制文件（如果缓存未命中）
+    - name: 下载并解压 Xray
+      run: |
+        mkdir -p xray_workspace
+        cd xray_workspace
+        if [ ! -f xray ]; then
+          curl -L -o xray.zip https://github.com/chaitin/xray/releases/download/1.9.11/xray_linux_amd64.zip
+          unzip -o xray.zip
+          mv xray_linux_amd64 xray
+          chmod +x xray
+        fi
+        ls -l xray  # 确保 xray 文件存在并可执行
+
+    # 步骤6：创建输出目录并运行 Rad 扫描
+    - name: 运行 Rad 扫描
+      run: |
+        mkdir -p output
+        ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} --text-output ./output/rad_output.txt
+
+    # 步骤7：验证 Rad 的输出
+    - name: 验证 Rad 输出
+      run: |
+        if [ -s output/rad_output.txt ]; then
+          echo "Rad 输出验证成功"
+        else
+          echo "Rad 输出为空或文件不存在"
+          exit 1
+        fi
+
+    # 步骤8：提取扫描到的网址并使用 Xray 扫描
+    - name: 提取网址并运行 Xray 扫描
+      id: xray_scan
+      run: |
+        grep -Eo 'http[s]?://[^ ]+' output/rad_output.txt > targets.txt
+        if [ -s targets.txt ]; then
+          cat targets.txt
+          mkdir -p xray_results
+          ./xray_workspace/xray webscan --basic-crawler targets.txt --html-output xray_results/xray_results.html
+        else
+          echo "没有提取到任何网址"
+          exit 1
+        fi
+        if [ -s xray_results/xray_results.html ]; then
+          cat xray_results/xray_results.html
+        else
+          echo "Xray 扫描结果为空"
+          exit 1
+        fi
+
+    # 步骤9：将扫描结果作为输出工件（Artifacts）导出
+    - name: 导出扫描结果
+      uses: actions/upload-artifact@v3
+      with:
+        name: scan-results
+        path: |
+          output/rad_output.txt
+          xray_results/xray_results.html
