@@ -1,6 +1,5 @@
 name: Rad & Xpoc 扫描
 
-# 手动触发工作流，用户需要输入目标域名
 on:
   workflow_dispatch:
     inputs:
@@ -22,7 +21,7 @@ jobs:
     - name: 缓存 Rad 二进制文件
       uses: actions/cache@v3
       with:
-        path: rad_workspace/rad.zip
+        path: rad_workspace/rad
         key: ${{ runner.os }}-rad-${{ hashFiles('rad_workspace/rad.zip') }}
         restore-keys: |
           ${{ runner.os }}-rad-
@@ -32,13 +31,13 @@ jobs:
       run: |
         mkdir -p rad_workspace
         cd rad_workspace
-        if [ ! -f rad.zip ]; then
+        if [ ! -f rad ]; then
           curl -L -o rad.zip https://github.com/chaitin/rad/releases/download/1.0/rad_linux_amd64.zip
+          unzip -o rad.zip
+          mv rad_linux_amd64 rad
+          chmod +x rad
         fi
-        unzip -o rad.zip
-        mv rad_linux_amd64 rad  # 将解压后的文件重命名为 rad
-        chmod +x rad  # 确保 rad 可执行
-        ls -l  # 列出文件，确保 rad 文件存在并可执行
+        ls -l rad  # 确保 rad 文件存在并可执行
 
     # 步骤4：缓存 Xpoc 二进制文件
     - name: 缓存 Xpoc 二进制文件
@@ -49,45 +48,59 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-xpoc-
 
-    # 步骤5：下载并解压 Xpoc 二进制文件（如果缓存未命中）
+    # 步骤5：下载 Xpoc 二进制文件（如果缓存未命中）
     - name: 下载 Xpoc
       run: |
         mkdir -p xpoc_workspace
         cd xpoc_workspace
         if [ ! -f xpoc ]; then
-          curl -L -o xpoc https://github.com/chaitin/xray/releases/download/xpoc-0.1.0/xpoc_linux_amd64
+          curl -L -o xpoc https://github.com/chaitin/xpoc/releases/download/xpoc-0.1.0/xpoc_linux_amd64
+          chmod +x xpoc
         fi
-        chmod +x xpoc  # 确保 xpoc 可执行
-        ls -l  # 列出文件，确保 xpoc 文件存在并可执行
-        ./xpoc --version  # 查看 xpoc 版本号
+        ls -l xpoc  # 确保 xpoc 文件存在并可执行
 
-    # 步骤6：创建输出目录并运行 Rad 扫描
+    # 步骤6：拉取所有 Xpoc 插件
+    - name: 拉取 Xpoc 插件
+      run: |
+        ./xpoc_workspace/xpoc pull
+
+    # 步骤7：创建输出目录并运行 Rad 扫描
     - name: 运行 Rad 扫描
       run: |
         mkdir -p output
-        ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} --text-output ./output/rad_output.txt  # 将输出结果保存到 output 目录中的 rad_output.txt 文件中
+        ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} --text-output ./output/rad_output.txt
 
-    # 步骤7：验证 Rad 的输出
+    # 步骤8：验证 Rad 的输出
     - name: 验证 Rad 输出
       run: |
-        cat output/rad_output.txt  # 输出 Rad 扫描的结果，确保文件不为空
+        if [ -s output/rad_output.txt ]; then
+          echo "Rad 输出验证成功"
+        else
+          echo "Rad 输出为空或文件不存在"
+          exit 1
+        fi
 
-    # 步骤8：提取扫描到的网址并使用 Xpoc 扫描
+    # 步骤9：提取扫描到的网址并使用 Xpoc 扫描
     - name: 提取网址并运行 Xpoc 扫描
       id: xpoc_scan
       run: |
-        # 提取 RAD 扫描结果中的网址，并保存到文件
         grep -Eo 'http[s]?://[^ ]+' output/rad_output.txt > targets.txt
-        
-        # 打印提取的 URL
-        cat targets.txt
+        if [ -s targets.txt ]; then
+          cat targets.txt
+          mkdir -p xpoc_results
+          ./xpoc_workspace/xpoc -i targets.txt -o xpoc_results/xpoc_results.html
+        else
+          echo "没有提取到任何网址"
+          exit 1
+        fi
+        if [ -s xpoc_results/xpoc_results.html ]; then
+          cat xpoc_results/xpoc_results.html
+        else
+          echo "Xpoc 扫描结果为空"
+          exit 1
+        fi
 
-        # 使用 Xpoc 扫描提取的 URL
-        mkdir -p xpoc_results
-        ./xpoc_workspace/xpoc -i targets.txt -o xpoc_results/xpoc_results.html
-        cat xpoc_results/xpoc_results.html  # 输出 Xpoc 扫描的结果，确保文件不为空
-
-    # 步骤9：将扫描结果作为输出工件（Artifacts）导出
+    # 步骤10：将扫描结果作为输出工件（Artifacts）导出
     - name: 导出扫描结果
       uses: actions/upload-artifact@v3
       with:
