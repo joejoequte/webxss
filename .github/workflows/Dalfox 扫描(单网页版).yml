@@ -33,7 +33,7 @@ jobs:
     - name: 运行 Rad 扫描
       run: |
         mkdir -p output
-        ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} -o ./output/rad_output.txt  # 将输出结果保存到 output 目录中的 rad_output.txt 文件中
+        ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} --json-output ./output/rad_output.json  # 将输出结果保存到 output 目录中的 rad_output.json 文件中
     
     # 步骤4：安装 Dalfox 工具
     - name: 安装 Dalfox
@@ -45,7 +45,7 @@ jobs:
     - name: 使用 Dalfox 扫描
       run: |
         mkdir -p dalfox_results
-        dalfox file output/rad_output.txt --output dalfox_results/dalfox_results.json --format json --report --report-format=json --silence
+        dalfox file output/rad_output.json --output dalfox_results/dalfox_results.json --format json --report --report-format=json --silence
 
     # 步骤6：将扫描结果作为输出工件（Artifacts）导出
     - name: 导出扫描结果
