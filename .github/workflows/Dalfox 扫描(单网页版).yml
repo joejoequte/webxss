@@ -61,13 +61,28 @@ jobs:
         mkdir -p output
         ./rad_workspace/rad -t ${{ github.event.inputs.target_domain }} --text-output ./output/rad_output.txt  # 将输出结果保存到 output 目录中的 rad_output.txt 文件中
 
-    # 步骤8：使用 Dalfox 扫描 Rad 的输出结果，并生成报告
-    - name: 使用 Dalfox 扫描
+    # 步骤7：验证 Rad 的输出
+    - name: 验证 Rad 输出
+      run: |
+        cat output/rad_output.txt  # 输出 Rad 扫描的结果，确保文件不为空
+
+    # 步骤8：将 Rad 的 JSON 输出转换为 TXT 文件
+    - name: 转换 Rad 输出为 TXT 文件
+      run: |
+        jq -r '.[] | .url' output/rad_output.json > output/rad_output.txt
+
+    # 步骤9：创建 Dalfox 结果目录
+    - name: 创建 Dalfox 结果目录
       run: |
         mkdir -p dalfox_results
-        dalfox file output/rad_output.txt --output dalfox_results/dalfox_results.json --format json --report --report-format=json --silence
 
-    # 步骤9：将扫描结果作为输出工件（Artifacts）导出
+    # 步骤10：使用 Dalfox 扫描 Rad 的输出结果，并生成报告
+    - name: 使用 Dalfox 扫描
+      run: |
+        dalfox file output/rad_output.txt --output dalfox_results/dalfox_results.json --format json --report --report-format=json --silence
+        cat dalfox_results/dalfox_results.json  # 输出 Dalfox 扫描的结果，确保文件不为空
+
+    # 步骤11：将扫描结果作为输出工件（Artifacts）导出
     - name: 导出扫描结果
       uses: actions/upload-artifact@v3
       with:
