@@ -91,14 +91,14 @@ jobs:
     - name: 提取网址并运行 Xray 扫描
       id: xray_scan
       run: |
-        grep -Eo 'http[s]?://[^ ]+' output/rad_output.txt > targets.txt
-        if [ -s targets.txt ]; then
-          cat targets.txt
+        #grep -Eo 'http[s]?://[^ ]+' output/rad_output.txt > targets.txt
+        #if [ -s targets.txt ]; then
+          #cat targets.txt
           mkdir -p xray_results
-          ./xray_workspace/xray webscan --basic-crawler targets.txt --html-output xray_results/xray_results.html
-        else
-          echo "没有提取到任何网址"
-          exit 1
+          ./xray_workspace/xray webscan --basic-crawler output/rad_output.txt --html-output xray_results/xray_results.html
+        #else
+          #echo "没有提取到任何网址"
+          #exit 1
         fi
         if [ -s xray_results/xray_results.html ]; then
           cat xray_results/xray_results.html
