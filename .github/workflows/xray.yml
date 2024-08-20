@@ -16,25 +16,27 @@ jobs:
     - name: 检出仓库代码
       uses: actions/checkout@v3
 
+   # 步骤2：缓存 Rad 二进制文件
     - name: 缓存 Rad 二进制文件
       uses: actions/cache@v3
       with:
-        path: rad_workspace/rad
+        path: rad_workspace/rad.zip
         key: ${{ runner.os }}-rad-${{ hashFiles('rad_workspace/rad.zip') }}
         restore-keys: |
           ${{ runner.os }}-rad-
 
+    # 步骤3：下载并解压 Rad 二进制文件（如果缓存未命中）
     - name: 下载并解压 Rad
       run: |
         mkdir -p rad_workspace
         cd rad_workspace
-        if [ ! -f rad ]; then
+        if [ ! -f rad.zip ]; then
           curl -L -o rad.zip https://github.com/chaitin/rad/releases/download/1.0/rad_linux_amd64.zip
-          unzip -o rad.zip
-          mv rad_linux_amd64 rad
-          chmod +x rad
         fi
-        ls -l rad
+        unzip -o rad.zip
+        mv rad_linux_amd64 rad  # 将解压后的文件重命名为 rad
+        chmod +x rad  # 确保 rad 可执行
+        ls -l  # 列出文件，确保 rad 文件存在并可执行
 
     - name: 缓存 Xray 二进制文件
       uses: actions/cache@v3
